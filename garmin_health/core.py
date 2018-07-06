@@ -51,7 +51,6 @@ class GarminHealth(object):
         self._interactive = interactive
         self._save_credentials = save_credentials
         self._import_credentials = import_credentials
-        self._api_id = None
 
         self._config_file = config_file
         if config_file is None:
@@ -59,6 +58,9 @@ class GarminHealth(object):
 
         # validate if options passed by constructor are good
         self.__validate_conditions()
+
+        # initialize core attributes
+        self._api_id = None
 
         # request oauth token
         self.__fetch_oauth_token()
