@@ -7,10 +7,12 @@ from requests_oauthlib import OAuth1Session
 from requests.exceptions import ReadTimeout, RequestException
 
 from garmin_health.exceptions import GarminHealthFatalException
-from garmin_health.utils import timestamp_calculator
+from garmin_health.utils import (
+    timestamp_calculator, save_json_data)
 from garmin_health.const import (
     CONFIG_DATA, REQUEST_TOKEN_URL, AUTHORIZE_TOKEN_URL, ACCESS_TOKEN_URL,
-    API_DAILIES, RETRY)
+    API_DAILIES, API_ACTIVITIES, API_SLEEPS, API_BODY, 
+    API_STRESS, API_USER_METRICS, API_MOVEIQ, API_USER_ID, RETRY)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +51,7 @@ class GarminHealth(object):
         self._interactive = interactive
         self._save_credentials = save_credentials
         self._import_credentials = import_credentials
+        self._api_id = None
 
         self._config_file = config_file
         if config_file is None:
@@ -62,7 +65,7 @@ class GarminHealth(object):
 
     def __repr__(self):
         """Object representation."""
-        return "<{0}>".format(self.__class__.__name__)
+        return "<{0}: {1}>".format(self.__class__.__name__, self.api_id)
 
     def __validate_conditions(self):
         """Validate if options passed by constructor are valid to proceed."""
@@ -263,12 +266,41 @@ class GarminHealth(object):
         except AttributeError:
             return False
 
-    def daily_summary(self, start_time=None, end_time=None):
-
+    def _summary(self, url, filename, start_time=None, end_time=None):
         # defaults to the last 24hrs
         if start_time is None and end_time is None:
             start_time, end_time = timestamp_calculator()
 
-        url = API_DAILIES + \
-            'uploadStartTimeInSeconds={0}&uploadEndTimeInSeconds={1}'.format(start_time, end_time)
-        return self.query(url)
+        endpoint = '{0}uploadStartTimeInSeconds={1}&uploadEndTimeInSeconds={2}'.format(url, start_time, end_time)
+        data = self.query(endpoint)
+        path = '/home/mdemello/Desktop/' + filename + '.json'
+        save_json_data(data, path)
+        return data
+
+    def daily_summary(self, start_time=None, end_time=None):
+        return self._summary(API_DAILIES, 'dailies')
+
+    def activity_summary(self,  start_time=None, end_time=None):
+        return self._summary(API_ACTIVITIES, 'activities')
+
+    def sleep_summary(self,  start_time=None, end_time=None):
+        return self._summary(API_SLEEPS, 'sleep')
+
+    def body_summary(self,  start_time=None, end_time=None):
+        return self._summary(API_BODY, 'body')
+
+    def stress_summary(self,  start_time=None, end_time=None):
+        return self._summary(API_STRESS, 'stress')
+
+    def user_metrics(self,  start_time=None, end_time=None):
+        return self._summary(API_USER_METRICS, 'userMetrics')
+
+    def moveiq(self,  start_time=None, end_time=None):
+        return self._summary(API_MOVEIQ, 'moveIQ')
+
+    @property
+    def api_id(self):
+        if self._api_id is None:
+            data = self.query(API_USER_ID)
+            self._api_id = data.get('userId')
+        return self._api_id
