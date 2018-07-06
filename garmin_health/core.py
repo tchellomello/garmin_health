@@ -6,6 +6,7 @@ import json
 from requests_oauthlib import OAuth1Session
 from requests.exceptions import ReadTimeout, RequestException
 
+from garmin_health.exceptions import GarminHealthFatalException
 from garmin_health.utils import timestamp_calculator
 from garmin_health.const import (
     CONFIG_DATA, REQUEST_TOKEN_URL, AUTHORIZE_TOKEN_URL, ACCESS_TOKEN_URL,
@@ -222,6 +223,7 @@ class GarminHealth(object):
         """
         # make sure oauth token is present
         if not self.authorized:
+            _LOGGER.debug("OAuth token not valid, trying to fetch a new one")
             self.__fetch_oauth_token()
 
         loop = 0
@@ -233,16 +235,25 @@ class GarminHealth(object):
                     _LOGGER.debug("Querying %s", url)
                     resp = self.oauth.get(url)
 
-                if resp and resp.status_code == 200:
-                    break
+                # in case of a problem
+                if not resp:
+                    if resp.status_code == 403:
+                        msg = "Invalid OAuth1 Token. Consider refreshing it!!"
+                        raise GarminHealthFatalException(msg)
 
-            # verify which type to return
-            if raw:
-                return resp
-            else:
-                return resp.json()
+                # if everything worked as expected
+                if resp.status_code == 200:
+                    if raw:
+                        return resp
+                    else:
+                        return resp.json()
+
+        # threat exceptions
         except (ReadTimeout, RequestException) as error_msg:
             _LOGGER.error("Error: %s", error_msg)
+
+        # if we haven't left the method yet, throw ops!
+        raise GarminHealthFatalException("Something went wrong!!!")
 
     @property
     def authorized(self):
