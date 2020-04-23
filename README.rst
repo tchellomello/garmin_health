@@ -1,3 +1,13 @@
+DEPRECATED
+===========
+@cyberjunky has put together a great code at https://github.com/cyberjunky/python-garminconnect
+
+This repo is currently deprecated and let's join forces with `python-garminconnect`
+
+Thanks @cyberjunky!!!
+
+
+
 =============
 Garmin Health
 =============
